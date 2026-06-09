@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { CheckCircle2, XCircle, FileQuestion, RotateCcw, ChevronRight } from 'lucide-react'
-import { QuizQuestion } from '@/lib/ai/prompts'
+import { CheckCircle2, XCircle, FileQuestion, RotateCcw, ChevronRight, Loader2 } from 'lucide-react'
+import { QuizQuestion } from '@/types/ai'
 
 interface QuizWidgetProps {
   questions: QuizQuestion[]
@@ -15,28 +15,47 @@ interface AnswerState {
 
 export default function QuizWidget({ questions }: QuizWidgetProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, AnswerState>>(
-    Object.fromEntries(questions.map((q) => [q.id, { selected: null, submitted: false }]))
-  )
+  // 💡 사용자가 직접 버튼을 클릭해 '제출한 답변 정보'만 독립적인 로컬 상태로 순수하게 관리합니다.
+  const [answers, setAnswers] = useState<Record<string, AnswerState>>({})
   const [quizFinished, setQuizFinished] = useState(false)
 
+  // ── 1. [런타임 크래시 철벽 방어 가드] ──
+  // 데이터가 아직 한 개도 없거나 스트리밍 극초반 빈 배열 상태일 때 하단 로직 평가를 완전 중단합니다.
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-8 text-center space-y-3 transition-colors duration-300">
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto" />
+        <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
+          AI가 맞춤형 평가 문항을 구조화하고 있습니다.<br />
+          첫 번째 문제가 조립될 때까지 잠시만 기다려 주세요...
+        </p>
+      </div>
+    )
+  }
+
+  // ── 2. [파생 상태(Derived State) 매핑 전략] ──
+  // useEffect 없이 현재 문제와 유저의 선택 상태를 실시간 런타임에서 다이렉트 매핑합니다. (싱크 어긋남 0%)
   const currentQuestion = questions[currentIdx]
-  const currentAnswer = answers[currentQuestion.id]
+
+  // 만약 유저가 아직 손대지 않은 신규 문제라면, 가짜 빈 상태 객체를 런타임에 파생시켜 컴포넌트에 공급합니다.
+  const currentAnswer = answers[currentQuestion.id] || { selected: null, submitted: false }
 
   const isCorrect =
     currentAnswer.submitted && currentAnswer.selected === currentQuestion.correctIdx
 
   const totalCorrect = questions.filter((q) => {
     const a = answers[q.id]
-    return a.submitted && a.selected === q.correctIdx
+    return a && a.submitted && a.selected === q.correctIdx
   }).length
 
   // 선택지 선택 핸들러
   const handleSelect = (idx: number) => {
-    if (currentAnswer.submitted) return
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: { ...prev[currentQuestion.id], selected: idx },
+      [currentQuestion.id]: {
+        selected: idx,
+        submitted: prev[currentQuestion.id]?.submitted || false
+      },
     }))
   }
 
@@ -45,7 +64,10 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
     if (currentAnswer.selected === null) return
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: { ...prev[currentQuestion.id], submitted: true },
+      [currentQuestion.id]: {
+        ...prev[currentQuestion.id],
+        submitted: true
+      },
     }))
   }
 
@@ -62,9 +84,7 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
   const handleReset = () => {
     setCurrentIdx(0)
     setQuizFinished(false)
-    setAnswers(
-      Object.fromEntries(questions.map((q) => [q.id, { selected: null, submitted: false }]))
-    )
+    setAnswers({}) // 간결하게 상태 초기화
   }
 
   const difficultyBadge: Record<QuizQuestion['difficulty'], string> = {
@@ -83,7 +103,7 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
     const percent = Math.round((totalCorrect / questions.length) * 100)
     const grade = percent >= 80 ? '우수' : percent >= 60 ? '양호' : '분발 필요'
     return (
-      <div className="bg-card border border-primary/20 rounded-2xl p-6 shadow-xs space-y-5 transition-colors duration-300">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-xs space-y-5 transition-colors duration-300">
         <div className="text-center space-y-3 py-4">
           <div className="text-5xl">{percent >= 80 ? '🎉' : percent >= 60 ? '👍' : '📚'}</div>
           <h3 className="text-xl font-bold tracking-tight">평가 완료</h3>
@@ -96,7 +116,6 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
             <span className="font-bold text-primary transition-colors duration-300">{grade}</span>
           </div>
 
-          {/* 진행 바 */}
           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
             <div
               className="h-1.5 bg-primary rounded-full transition-all duration-700"
@@ -105,19 +124,17 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
           </div>
         </div>
 
-        {/* 문항별 결과 요약 */}
         <div className="space-y-2">
           {questions.map((q, idx) => {
-            const a = answers[q.id]
+            const a = answers[q.id] || { selected: null }
             const correct = a.selected === q.correctIdx
             return (
               <div
                 key={q.id}
-                className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-xs transition-colors duration-200 ${
-                  correct
+                className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-xs transition-colors duration-200 ${correct
                     ? 'bg-emerald-500/5 border-emerald-500/20'
                     : 'bg-rose-500/5 border-rose-500/20'
-                }`}
+                  }`}
               >
                 {correct ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
@@ -145,7 +162,7 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
 
   // ── 문제 풀이 화면 ──
   return (
-    <div className="bg-card border border-primary/20 rounded-2xl p-6 shadow-xs space-y-5 transition-colors duration-300">
+    <div className="bg-card border border-border rounded-2xl p-6 shadow-xs space-y-5 transition-colors duration-300">
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b border-border pb-3">
         <div className="flex items-center gap-2">
@@ -154,9 +171,8 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
-              difficultyBadge[currentQuestion.difficulty]
-            }`}
+            className={`text-[9px] font-bold px-2 py-0.5 rounded border ${difficultyBadge[currentQuestion.difficulty]
+              }`}
           >
             {difficultyLabel[currentQuestion.difficulty]}
           </span>
@@ -222,14 +238,13 @@ export default function QuizWidget({ questions }: QuizWidgetProps) {
         })}
       </div>
 
-      {/* 해설 패널 (제출 후 노출) */}
+      {/* 해설 패널 */}
       {currentAnswer.submitted && (
         <div
-          className={`p-4 rounded-xl border text-xs leading-relaxed transition-all duration-300 ${
-            isCorrect
+          className={`p-4 rounded-xl border text-xs leading-relaxed transition-all duration-300 ${isCorrect
               ? 'bg-emerald-500/10 border-emerald-500/20'
               : 'bg-rose-500/10 border-rose-500/20'
-          }`}
+            }`}
         >
           <h4 className="font-bold text-[13px] flex items-center gap-1.5 mb-1.5">
             {isCorrect ? (

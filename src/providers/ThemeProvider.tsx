@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = document.documentElement
     root.setAttribute('data-theme', theme)
-    
+
     // 브라우저의 기본 background 컬러 스타일도 연동되도록 body 클래스를 맞춥니다.
     if (theme === 'dark') {
       root.classList.add('dark')
@@ -51,16 +51,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <ThemeContext.Provider 
-      value={{ 
-        user, 
-        theme, 
-        focusMode, 
-        setUser, 
-        setTheme, 
-        toggleTheme, 
-        setFocusMode, 
-        simulateUserSession 
+    <ThemeContext.Provider
+      value={{
+        user,
+        theme,
+        focusMode,
+        setUser,
+        setTheme,
+        toggleTheme,
+        setFocusMode,
+        simulateUserSession
       }}
     >
       {children}

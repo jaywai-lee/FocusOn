@@ -1,26 +1,29 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { ThemeProvider } from "@/providers/ThemeProvider";
+import React from 'react'
+import type { Metadata } from 'next'
+import { AuthProvider } from '@/providers/AuthProvider'
+import { ThemeProvider } from '@/providers/ThemeProvider'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "FocusOn | 초개인화 AI 학습 보조 플랫폼",
-  description: "연령 및 성별 기반 도메인 컨텍스트 포커싱 기술과 다이내믹 디자인 토큰 시스템으로 맞춤형 AI 학습 경험을 제공합니다.",
-};
+  title: 'FocusOn - 초개인화 AI 학습 플랫폼',
+  description: 'AI와 함께하는 스마트한 지식 캡처 및 학습 대시보드',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="ko" className="h-full">
-      <body className="min-h-full font-sans antialiased">
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+    <html lang="ko" suppressHydrationWarning>
+      <body className="antialiased selection:bg-primary/20">
+        {/* 🚨 [컨텍스트 주입 확정]: AuthProvider를 최상단에 배치하여 하위 라우트 전체를 철벽 방어 */}
+        <AuthProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
-  );
+  )
 }
-
-

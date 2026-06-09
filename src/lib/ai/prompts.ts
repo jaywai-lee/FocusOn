@@ -1,40 +1,5 @@
 import { FocusModeType } from '@/lib/supabase'
-
-// ────────────────────────────────────────────────
-// 공용 타입 정의
-// ────────────────────────────────────────────────
-
-export interface QuizQuestion {
-  id: string
-  question: string
-  options: string[]          // 보기 4개
-  correctIdx: number         // 0-based 정답 인덱스
-  explanation: string        // 해설
-  difficulty: 'easy' | 'medium' | 'hard'
-  topic: string
-}
-
-export interface DigestSummary {
-  title: string
-  bullets: string[]
-  keywords: string[]
-  readingTime: string        // 예) "읽는 데 약 2분"
-}
-
-export interface ReasoningStep {
-  id: string
-  phase: '스캔' | '검증' | '결론'
-  title: string
-  description: string
-  confidence: number         // 0-100
-}
-
-export interface ReasoningResult {
-  query: string
-  steps: ReasoningStep[]
-  finalConclusion: string
-  factAccuracy: number       // 0-100
-}
+import { QuizQuestion, DigestSummary, ReasoningStep, ReasoningResult } from '@/types/ai'
 
 // ────────────────────────────────────────────────
 // 모드별 System Prompt 템플릿
